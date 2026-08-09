@@ -1,0 +1,17 @@
+{
+  "name": "mobile-canvas-claude",
+  "description": "Claude Code port of Mobile Canvas: control local iOS Simulators and Android emulators.",
+  "owner": {
+    "name": "Daniel Okebukola",
+    "url": "https://github.com/DannyKeys"
+  },
+  "repository": "https://github.com/DannyKeys/mobile-canvas-claude",
+  "plugins": [
+    {
+      "name": "mobile-canvas",
+      "source": "./",
+      "version": "0.1.0",
+      "description": "Drive local iOS Simulators and Android emulators from Claude Code."
+    }
+  ]
+}
