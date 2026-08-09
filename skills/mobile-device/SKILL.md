@@ -116,6 +116,14 @@ exception is usually legible in the first lines after launch.
   `mobile_device_file_push` / `_pull` — seed the pasteboard, photo library, or
   app container.
 
+`mobile_device_file_*` addresses two different places. With a `bundleId` the path is
+relative to that app's data container, which is where its database and the files it
+wrote actually live. Without one, the path is an absolute device path. Prefer the
+container form: on Android nothing but the app can read those files, and on iOS the
+container is a directory named after a GUID that changes on every reinstall, so an
+absolute path captured earlier will silently point at nothing. Android container
+access also needs a debuggable build, and says so when the build is not one.
+
 Prefer these over driving the Settings app by hand; they are faster and do not
 break when the OS reorganises Settings.
 
