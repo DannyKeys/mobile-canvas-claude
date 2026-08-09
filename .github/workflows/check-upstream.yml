@@ -19,9 +19,19 @@ jobs:
       - name: Compare pinned tag against latest release
         id: compare
         run: |
+          # Both the tag and the repository come from the manifest, which is the one
+          # place upstream identity is recorded. Hardcoding the repo here would create
+          # a second copy that can silently drift from the one doctor.mjs reads.
           PINNED=$(node -p "require('./runtimes/manifest.json').distribution.tag")
-          LATEST=$(curl -fsSL -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/Redth/mobile-canvas-ghcp/releases/latest | node -p \
+          REPO=$(node -p "require('./runtimes/manifest.json').distribution.repository")
+          # GITHUB_TOKEN lifts the anonymous 60/hr limit, which is shared across the
+          # whole hosted-runner IP pool and so is hit for reasons unrelated to us.
+          # A 403 fails this step loudly rather than reporting a false "up to date",
+          # but a job nobody watches should not go red for someone else's traffic.
+          LATEST=$(curl -fsSL --connect-timeout 10 --max-time 30 \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/$REPO/releases/latest" | node -p \
             "JSON.parse(require('fs').readFileSync(0,'utf8')).tag_name")
           echo "pinned=$PINNED" >> "$GITHUB_OUTPUT"
           echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
@@ -42,10 +52,12 @@ jobs:
           body: |
             Automated bump from ${{ steps.compare.outputs.pinned }} to ${{ steps.compare.outputs.latest }}.
 
-            Only the five upstream-owned files changed. Before merging, re-verify the
-            three coupling points, none of which fails loudly:
+            Only the five upstream-owned files changed. Re-verify the three coupling
+            points below, then smoke-test on a real device. The first two cannot fail
+            loudly and must be checked by hand; the third is checked for you, because
+            CI re-runs the MCP smoke test on this PR.
 
             - [ ] `resolveCommand()` is still exported from `lib/runtime.mjs`
             - [ ] `canvas open --json` still returns `{url, title}` (undocumented verb, no compatibility promise)
-            - [ ] `node --test tests/mcp-smoke.test.mjs` passes, confirming no `mobile_device_*` tool the skills call was renamed
-            - [ ] Smoke test on a real device: `ui_find` → `ui_tap` → `screenshot`
+            - [ ] CI is green on this PR, so no `mobile_device_*` tool the skills call was renamed
+            - [ ] Device smoke test: `ui_find` → `ui_tap` → `screenshot` changes the screen
