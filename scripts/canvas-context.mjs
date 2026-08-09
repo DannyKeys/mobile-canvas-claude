@@ -8,22 +8,43 @@
 // plainly see selected. This module is therefore the only place the pair is computed.
 
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const INSTANCE_ID = "claude";
 
-export function canvasContext(dir = process.cwd()) {
-  // realpath so a symlinked checkout and its target share one canvas. A path that
-  // does not exist yet still has to produce a stable id, so fall back to resolve().
-  let projectDir;
+// Running from a subdirectory of the same project must yield the same pair as
+// running from the root, otherwise it is exactly the silent second-empty-canvas
+// failure this module exists to prevent. Resolve to the git top-level when there is
+// one; a directory that is not a repo (or has no git installed) falls back to the
+// realpath of the given directory instead.
+function resolveProjectRoot(dir) {
   try {
-    projectDir = realpathSync(dir);
+    const top = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      cwd: dir,
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 10_000,
+    })
+      .toString()
+      .trim();
+    if (top) return realpathSync(top);
   } catch {
-    projectDir = resolve(dir);
+    // git absent, not a repo, or timed out: fall through to the plain directory.
   }
 
+  // realpath so a symlinked checkout and its target share one canvas. A path that
+  // does not exist yet still has to produce a stable id, so fall back to resolve().
+  try {
+    return realpathSync(dir);
+  } catch {
+    return resolve(dir);
+  }
+}
+
+export function canvasContext(dir = process.cwd()) {
+  const projectDir = resolveProjectRoot(dir);
   const sessionId = createHash("sha256").update(projectDir).digest("hex").slice(0, 16);
   return { sessionId, instanceId: INSTANCE_ID, projectDir };
 }

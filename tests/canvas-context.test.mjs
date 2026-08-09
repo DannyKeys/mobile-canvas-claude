@@ -1,9 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, symlinkSync, realpathSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canvasContext, INSTANCE_ID } from "../scripts/canvas-context.mjs";
+
+function initGitRepo(prefix) {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  return dir;
+}
 
 test("instanceId is the constant 'claude'", () => {
   assert.equal(INSTANCE_ID, "claude");
@@ -43,4 +50,17 @@ test("projectDir is fully resolved", () => {
 test("a directory that does not exist still yields a stable id", () => {
   const missing = join(tmpdir(), "mc-ctx-does-not-exist-12345");
   assert.equal(canvasContext(missing).sessionId, canvasContext(missing).sessionId);
+});
+
+test("a subdirectory of a git repo yields the same sessionId as its root", () => {
+  const root = initGitRepo("mc-ctx-git-");
+  const sub = join(root, "nested", "deeper");
+  mkdirSync(sub, { recursive: true });
+  assert.equal(canvasContext(sub).sessionId, canvasContext(root).sessionId);
+});
+
+test("two different git repos still yield different sessionIds", () => {
+  const repoA = initGitRepo("mc-ctx-git-a-");
+  const repoB = initGitRepo("mc-ctx-git-b-");
+  assert.notEqual(canvasContext(repoA).sessionId, canvasContext(repoB).sessionId);
 });

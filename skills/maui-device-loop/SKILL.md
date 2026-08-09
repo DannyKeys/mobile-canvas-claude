@@ -10,7 +10,6 @@ when_to_use: |
   emulator", "does this XAML change look right", "build and run on iOS", "test
   this fix on Android", "why does this page look wrong on device", "iterate on
   this layout", "check the app on both platforms".
-allowed-tools: Bash, Read, Edit, Glob, Grep
 ---
 
 # The MAUI build → deploy → drive loop

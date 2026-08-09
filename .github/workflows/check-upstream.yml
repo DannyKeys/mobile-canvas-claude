@@ -18,6 +18,8 @@ jobs:
 
       - name: Compare pinned tag against latest release
         id: compare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Both the tag and the repository come from the manifest, which is the one
           # place upstream identity is recorded. Hardcoding the repo here would create
@@ -30,21 +32,33 @@ jobs:
           # but a job nobody watches should not go red for someone else's traffic.
           LATEST=$(curl -fsSL --connect-timeout 10 --max-time 30 \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
             "https://api.github.com/repos/$REPO/releases/latest" | node -p \
             "JSON.parse(require('fs').readFileSync(0,'utf8')).tag_name")
-          echo "pinned=$PINNED" >> "$GITHUB_OUTPUT"
-          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          {
+            echo "pinned<<EOF_PINNED"
+            echo "$PINNED"
+            echo "EOF_PINNED"
+            echo "latest<<EOF_LATEST"
+            echo "$LATEST"
+            echo "EOF_LATEST"
+          } >> "$GITHUB_OUTPUT"
           if [ "$PINNED" = "$LATEST" ]; then echo "changed=false" >> "$GITHUB_OUTPUT";
           else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
 
       - name: Sync upstream-owned files
         if: steps.compare.outputs.changed == 'true'
-        run: node scripts/sync-upstream.mjs "${{ steps.compare.outputs.latest }}"
+        env:
+          LATEST: ${{ steps.compare.outputs.latest }}
+        run: node scripts/sync-upstream.mjs "$LATEST"
+
+      - name: Run tests against the synced engine
+        if: steps.compare.outputs.changed == 'true'
+        run: node --test tests/canvas-context.test.mjs tests/sync-upstream.test.mjs tests/mcp-smoke.test.mjs
 
       - name: Open pull request
         if: steps.compare.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
         with:
           branch: chore/upstream-${{ steps.compare.outputs.latest }}
           title: "chore: bump upstream engine to ${{ steps.compare.outputs.latest }}"
@@ -54,10 +68,11 @@ jobs:
 
             Only the five upstream-owned files changed. Re-verify the three coupling
             points below, then smoke-test on a real device. The first two cannot fail
-            loudly and must be checked by hand; the third is checked for you, because
-            CI re-runs the MCP smoke test on this PR.
+            loudly and must be checked by hand; the third already ran in the
+            `check-upstream` job before this PR was opened (`canvas-context`,
+            `sync-upstream`, and `mcp-smoke` tests). It did NOT run as this PR's own
+            CI, which never triggers for a bot-authored branch or PR.
 
             - [ ] `resolveCommand()` is still exported from `lib/runtime.mjs`
             - [ ] `canvas open --json` still returns `{url, title}` (undocumented verb, no compatibility promise)
-            - [ ] CI is green on this PR, so no `mobile_device_*` tool the skills call was renamed
             - [ ] Device smoke test: `ui_find` → `ui_tap` → `screenshot` changes the screen

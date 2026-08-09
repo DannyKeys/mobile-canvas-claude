@@ -14,13 +14,12 @@ when_to_use: |
   I have", "deploy to the emulator", "reproduce this on iOS", "why did the app
   crash on device", "grant the app camera permission", "fake a GPS location",
   "test this on a slow network", "walk through onboarding on device".
-allowed-tools: Bash, Read
 ---
 
 # Driving a local mobile device
 
 The `mobile_device_*` MCP tools control iOS Simulators and Android emulators on
-this machine — 61 of them, covering far more than input and screenshots. A live
+this machine — 60+ of them, covering far more than input and screenshots. A live
 browser view of the same device is available through `/mobile-canvas:canvas`.
 
 ## Canvas context

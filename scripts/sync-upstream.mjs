@@ -52,7 +52,13 @@ export function assertThinManifest(manifest) {
 }
 
 export async function sync(tag) {
-  const repo = "Redth/mobile-canvas-ghcp";
+  // Read from the local manifest rather than hardcoding, so this is not a third
+  // copy of upstream identity that can silently drift from doctor.mjs and the
+  // check-upstream workflow, which both already read distribution.repository.
+  // Identity is stable across tags, so bootstrapping from the manifest already on
+  // disk is safe even for the very tag being synced.
+  const localManifest = JSON.parse(readFileSync(join(root, "runtimes", "manifest.json"), "utf8"));
+  const repo = localManifest.distribution.repository;
   const url = `https://github.com/${repo}/releases/download/${tag}/mobile-canvas-copilot-plugin-thin-${tag}.tar.gz`;
   const work = mkdtempSync(join(tmpdir(), "mc-sync-"));
 

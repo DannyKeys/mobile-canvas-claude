@@ -49,9 +49,13 @@ async function androidTool(bin, subdir) {
 // when upstream could not be reached or answered with a non-OK status.
 export function driftDetail(pinned, latest) {
   if (!latest) return `pinned ${pinned} (upstream unreachable)`;
+  // The person seeing this is running /mobile-canvas:doctor inside their own
+  // project, where scripts/sync-upstream.mjs does not exist and, even resolved,
+  // would hand-patch an installed plugin directory. The user-facing remedy is to
+  // update the plugin from the marketplace; sync-upstream is the maintainer path.
   return latest === pinned
     ? `pinned ${pinned}, up to date`
-    : `pinned ${pinned}, latest is ${latest}. Run: node scripts/sync-upstream.mjs ${latest}`;
+    : `pinned ${pinned}, latest is ${latest}. Update the mobile-canvas plugin from the marketplace (maintainers: node scripts/sync-upstream.mjs ${latest}).`;
 }
 
 export async function runChecks({ offline = false } = {}) {

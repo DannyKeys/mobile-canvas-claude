@@ -1,7 +1,6 @@
 ---
 description: List local iOS Simulators and Android emulators
 argument-hint: "[ios|android]"
-allowed-tools: Bash
 ---
 
 List the local virtual devices using the `mobile_device_list` tool.

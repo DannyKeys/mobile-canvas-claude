@@ -44,6 +44,9 @@ test("drift comparison reports up to date, behind, and unreachable", () => {
 
   const behind = driftDetail("v0.1.7", "v0.1.8");
   assert.match(behind, /latest is v0\.1\.8/);
+  // User-facing remedy is "update from the marketplace"; sync-upstream is called
+  // out as the maintainer-only path, not handed to the end user as the primary fix.
+  assert.match(behind, /marketplace/i);
   assert.match(behind, /sync-upstream\.mjs v0\.1\.8/);
 
   assert.equal(driftDetail("v0.1.7", null), "pinned v0.1.7 (upstream unreachable)");
