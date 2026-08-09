@@ -5,7 +5,7 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { readFileSync } from "node:fs";
+import { accessSync, constants, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { resolveCommand } from "../lib/runtime.mjs";
@@ -32,13 +32,26 @@ async function androidTool(bin, subdir) {
     await run(candidate, ["--version"], { timeout: 10_000 });
     return candidate;
   } catch {
+    // Not every SDK tool accepts --version cleanly, so failing that is not proof of
+    // absence. Fall back to an EXECUTABLE check, never a readable one: a file that
+    // can be read but not run would otherwise be reported PASS, which is precisely
+    // the silent failure this whole command exists to catch.
     try {
-      readFileSync(candidate);
+      accessSync(candidate, constants.X_OK);
       return candidate;
     } catch {
       return null;
     }
   }
+}
+
+// Pure, so the drift comparison is testable without a network call. `latest` is null
+// when upstream could not be reached or answered with a non-OK status.
+export function driftDetail(pinned, latest) {
+  if (!latest) return `pinned ${pinned} (upstream unreachable)`;
+  return latest === pinned
+    ? `pinned ${pinned}, up to date`
+    : `pinned ${pinned}, latest is ${latest}. Run: node scripts/sync-upstream.mjs ${latest}`;
 }
 
 export async function runChecks({ offline = false } = {}) {
@@ -123,21 +136,19 @@ export async function runChecks({ offline = false } = {}) {
   const repo = manifest.distribution.repository;
   let detail = `pinned ${pinned} (drift check skipped)`;
   if (!offline) {
+    let latest = null;
     try {
       const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
         headers: { accept: "application/vnd.github+json" },
         signal: AbortSignal.timeout(10_000),
       });
-      if (res.ok) {
-        const latest = (await res.json()).tag_name;
-        detail =
-          latest === pinned
-            ? `pinned ${pinned}, up to date`
-            : `pinned ${pinned}, latest is ${latest}. Run: node scripts/sync-upstream.mjs ${latest}`;
-      }
+      // A rate-limited 403 is "unreachable" too, so leaving latest null covers both
+      // and avoids reporting "skipped" for a check that was attempted and rejected.
+      if (res.ok) latest = (await res.json()).tag_name;
     } catch {
-      detail = `pinned ${pinned} (upstream unreachable)`;
+      latest = null;
     }
+    detail = driftDetail(pinned, latest);
   }
   checks.push({ name: "upstream", ok: true, advisory: true, detail });
 
