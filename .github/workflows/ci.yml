@@ -1,0 +1,16 @@
+name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: Unit tests
+        run: node --test tests/canvas-context.test.mjs tests/sync-upstream.test.mjs
+      - name: MCP smoke test
+        run: node --test tests/mcp-smoke.test.mjs
