@@ -27,8 +27,20 @@ export const UPSTREAM_OWNED = [
 ];
 
 export function assertThinManifest(manifest) {
-  for (const [platform, entry] of Object.entries(manifest.runtimes ?? {})) {
-    for (const [name, file] of Object.entries(entry.files ?? {})) {
+  // An empty map iterates zero times, so a shape-only loop would accept a manifest
+  // with nothing in it at all. A guard that passes "there is nothing to check" is
+  // not a guard, so absence is rejected explicitly before the shape is examined.
+  const runtimes = Object.entries(manifest.runtimes ?? {});
+  if (runtimes.length === 0) {
+    throw new Error("manifest declares no runtimes; refusing to install one with nothing to verify");
+  }
+
+  for (const [platform, entry] of runtimes) {
+    const files = Object.entries(entry.files ?? {});
+    if (files.length === 0) {
+      throw new Error(`manifest runtime ${platform} declares no files`);
+    }
+    for (const [name, file] of files) {
       if (!file.asset) {
         throw new Error(
           `fat manifest detected at ${platform}/${name}: expected an "asset" download name, ` +

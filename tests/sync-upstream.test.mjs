@@ -33,3 +33,14 @@ test("the vendored manifest in this repo is thin", () => {
   const manifest = JSON.parse(readFileSync(join(root, "runtimes", "manifest.json"), "utf8"));
   assert.doesNotThrow(() => assertThinManifest(manifest));
 });
+
+// Without these, the guard passes anything with an empty runtimes map, which is the
+// one input where "no violations found" and "nothing was examined" look identical.
+test("rejects a manifest with nothing to verify", () => {
+  assert.throws(() => assertThinManifest({}), /no runtimes/i);
+  assert.throws(() => assertThinManifest({ runtimes: {} }), /no runtimes/i);
+  assert.throws(
+    () => assertThinManifest({ runtimes: { "darwin-arm64": {} } }),
+    /declares no files/i,
+  );
+});
