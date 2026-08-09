@@ -32,5 +32,5 @@ The canvas shows live video and accepts real tap, drag, scroll and keyboard inpu
 A device selected there is visible to `mobile_device_get_selected` using the same
 context pair, and a device you select with `mobile_device_select` appears there.
 Never invent a `sessionId` or `instanceId`: always take them from
-`scripts/canvas-context.mjs`, because a mismatched pair silently opens a second,
-empty canvas rather than failing.
+`${CLAUDE_PLUGIN_ROOT}/scripts/canvas-context.mjs`, because a mismatched pair
+silently opens a second, empty canvas rather than failing.
