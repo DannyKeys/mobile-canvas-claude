@@ -1,7 +1,10 @@
 name: check-upstream
 on:
   schedule:
-    - cron: "0 9 * * 1"   # Mondays 09:00 UTC
+    # Daily, not weekly. Upstream has shipped as many as three releases in a single
+    # afternoon, so a Monday-only check leaves us several versions behind for most
+    # of the week. The job is a no-op on the days nothing has been released.
+    - cron: "0 9 * * *"   # Daily 09:00 UTC
   workflow_dispatch:
 
 permissions:

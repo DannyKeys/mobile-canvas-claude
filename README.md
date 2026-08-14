@@ -50,14 +50,15 @@ that surface directly rather than through a slash command:
 ## Upstream sync
 
 Five files are upstream-owned and never hand-edited: `.mcp.json`, `lib/runtime.mjs`,
-`lib/runtime-assets.mjs`, `scripts/mcp.mjs`, `runtimes/manifest.json`. This repo is
-currently pinned to upstream `v0.1.7` (see `runtimes/manifest.json`).
+`lib/runtime-assets.mjs`, `scripts/mcp.mjs`, `runtimes/manifest.json`. The pinned tag
+lives in `runtimes/manifest.json` and is deliberately not restated here, because a
+second copy in prose has no way to fail loudly when it falls out of date.
 
 ```bash
-node scripts/sync-upstream.mjs v0.1.8
+node scripts/sync-upstream.mjs <tag>
 ```
 
-A scheduled workflow does this weekly and opens a PR. Sync always reads the **thin**
+A scheduled workflow does this daily and opens a PR. Sync always reads the **thin**
 tarball. The standalone `mobile-canvas-runtime-manifest-<tag>.json` release asset is
 the fat variant, and because its hashes are identical the mistake would not be caught
 by verification, only by failing at first use.
