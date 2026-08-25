@@ -1,7 +1,7 @@
 {
   "name": "mobile-canvas",
   "description": "Drive local iOS Simulators and Android emulators from Claude Code: boot, install, launch, tap by accessibility element, type, screenshot, record, read logs and crashes.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Daniel Okebukola",
     "url": "https://github.com/DannyKeys"
