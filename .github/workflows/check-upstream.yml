@@ -55,9 +55,26 @@ jobs:
           LATEST: ${{ steps.compare.outputs.latest }}
         run: node scripts/sync-upstream.mjs "$LATEST"
 
+      - name: Bump the plugin version
+        id: bump
+        if: steps.compare.outputs.changed == 'true'
+        run: |
+          # The engine sync alone is invisible to an existing install: the client
+          # caches per plugin version, so `plugin update` on an unchanged version
+          # copies nothing and leaves the old engine pinned. The bump ships with the
+          # sync rather than as a follow-up, because a follow-up is exactly what gets
+          # forgotten. The script prints the new version on stdout and nothing else.
+          #
+          # Caveat worth knowing: the next version is computed from main. If an
+          # earlier bump PR is still open when this runs, both will propose the same
+          # version, and merging both would put two different engines behind one
+          # version string. Merge or close the older PR first; the checklist below
+          # repeats this.
+          echo "version=$(node scripts/bump-plugin-version.mjs)" >> "$GITHUB_OUTPUT"
+
       - name: Run tests against the synced engine
         if: steps.compare.outputs.changed == 'true'
-        run: node --test tests/canvas-context.test.mjs tests/sync-upstream.test.mjs tests/mcp-smoke.test.mjs
+        run: node --test tests/canvas-context.test.mjs tests/sync-upstream.test.mjs tests/bump-plugin-version.test.mjs tests/mcp-smoke.test.mjs
 
       - name: Open pull request
         if: steps.compare.outputs.changed == 'true'
@@ -65,17 +82,29 @@ jobs:
         with:
           branch: chore/upstream-${{ steps.compare.outputs.latest }}
           title: "chore: bump upstream engine to ${{ steps.compare.outputs.latest }}"
-          commit-message: "chore: bump upstream engine to ${{ steps.compare.outputs.latest }}"
-          body: |
-            Automated bump from ${{ steps.compare.outputs.pinned }} to ${{ steps.compare.outputs.latest }}.
+          commit-message: |
+            chore: bump upstream engine to ${{ steps.compare.outputs.latest }}
 
-            Only the five upstream-owned files changed. Re-verify the three coupling
-            points below, then smoke-test on a real device. The first two cannot fail
-            loudly and must be checked by hand; the third already ran in the
-            `check-upstream` job before this PR was opened (`canvas-context`,
-            `sync-upstream`, and `mcp-smoke` tests). It did NOT run as this PR's own
-            CI, which never triggers for a bot-authored branch or PR.
+            Plugin ${{ steps.bump.outputs.version }}, so installs that already hold
+            the previous version actually refresh.
+          body: |
+            Automated bump from ${{ steps.compare.outputs.pinned }} to ${{ steps.compare.outputs.latest }},
+            with the plugin version moved to ${{ steps.bump.outputs.version }}.
+
+            The five upstream-owned files changed, plus the two files that declare the
+            plugin version. That version bump is not cosmetic: the client caches an
+            install under `cache/<marketplace>/<plugin>/<version>/`, so shipping a new
+            engine under an unchanged version leaves every existing install on the old
+            one while `plugin update` still reports success.
+
+            Re-verify the three coupling points below, then smoke-test on a real
+            device. The first two cannot fail loudly and must be checked by hand; the
+            third already ran in the `check-upstream` job before this PR was opened
+            (`canvas-context`, `sync-upstream`, `bump-plugin-version`, and `mcp-smoke`
+            tests). It did NOT run as this PR's own CI, which never triggers for a
+            bot-authored branch or PR.
 
             - [ ] `resolveCommand()` is still exported from `lib/runtime.mjs`
             - [ ] `canvas open --json` still returns `{url, title}` (undocumented verb, no compatibility promise)
             - [ ] Device smoke test: `ui_find` → `ui_tap` → `screenshot` changes the screen
+            - [ ] No older upstream PR is still open proposing this same plugin version
