@@ -10,7 +10,7 @@
     {
       "name": "mobile-canvas",
       "source": "./",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "description": "Drive local iOS Simulators and Android emulators from Claude Code."
     }
   ]
